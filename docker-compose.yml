@@ -62,4 +62,5 @@ volumes:
 
 networks:
   ai-bridge:
+    name: docker_ai-bridge
     external: true
