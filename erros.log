@@ -1,42 +1,20 @@
- => CANCELED [backend 3/6] RUN apt-get update && apt-get install -y     build-essential     && rm -rf /var/lib/apt/lists/*                              11.2s
- => [frontend build 4/6] RUN npm install                                                                                                                 9.9s
- => [frontend build 5/6] COPY . .                                                                                                                        0.2s
- => ERROR [frontend build 6/6] RUN npm run build                                                                                                         0.8s
-------
- > [frontend build 6/6] RUN npm run build:
-0.611
-0.611 > frontend@0.0.0 build
-0.611 > vite build
-0.611
-0.719 You are using Node.js 18.20.8. Vite requires Node.js version 20.19+ or 22.12+. Please upgrade your Node.js version.
-0.733 file:///app/node_modules/vite/dist/node/cli.js:534
-0.733                           this.dispatchEvent(new CustomEvent(`command:${commandName}`, { detail: command }));
-0.733                                                  ^
-0.733
-0.733 ReferenceError: CustomEvent is not defined
-0.733     at CAC.parse (file:///app/node_modules/vite/dist/node/cli.js:534:28)
-0.733     at file:///app/node_modules/vite/dist/node/cli.js:835:5
-0.733     at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
-0.733     at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
-[+] up 17/19
- ✔ Image ollama/ollama:latest    Pulled                                                                                                                 121.7s
- ✔ Image certbot/certbot         Pulled                                                                                                                  10.8s
- ⠙ Image markdownmaster-backend  Building                                                                                                                22.6s
- ⠙ Image markdownmaster-frontend Building                                                                                                                22.6s
-Dockerfile:10
+### Requesting Let's Encrypt certificate for md.gcslab.org ...
+Container markdownmaster-certbot-run-d8fd4b92c37c Creating
+Container markdownmaster-certbot-run-d8fd4b92c37c Created
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+Requesting a certificate for md.gcslab.org
 
---------------------
+Certbot failed to authenticate some domains (authenticator: webroot). The Certificate Authority reported these problems:
+  Identifier: md.gcslab.org
+  Type:   unauthorized
+  Detail: 2606:4700:3032::6815:51d1: Invalid response from http://md.gcslab.org/.well-known/acme-challenge/LJhar31DBPgn3YAQX8QUBm_wEq63z4YgLBqzF6Oz7BM: 502
 
-   8 |
+Hint: The Certificate Authority failed to download the temporary challenge files created by Certbot. Ensure that the listed identifiers serve their content from the provided --webroot-path/-w and that files created there can be downloaded from the internet.
 
-   9 |     COPY . .
+Some challenges have failed.
+Ask for help or search for solutions at https://community.letsencrypt.org. See the logfile /var/log/letsencrypt/letsencrypt.log or re-run Certbot with -v for more details.
 
-  10 | >>> RUN npm run build
 
-  11 |
-
-  12 |     # Stage 2: Serve the application with Nginx
-
---------------------
-
-target frontend: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+### Reloading nginx ...
+2026/05/12 06:15:30 [emerg] 31#31: cannot load certificate "/etc/letsencrypt/live/md.gcslab.org/fullchain.pem": BIO_new_file() failed (SSL: error:80000002:system library::No such file or directory:calling fopen(/etc/letsencrypt/live/md.gcslab.org/fullchain.pem, r) error:10000080:BIO routines::no such file)
+nginx: [emerg] cannot load certificate "/etc/letsencrypt/live/md.gcslab.org/fullchain.pem": BIO_new_file() failed (SSL: error:80000002:system library::No such file or directory:calling fopen(/etc/letsencrypt/live/md.gcslab.org/fullchain.pem, r) error:10000080:BIO routines::no such file)
