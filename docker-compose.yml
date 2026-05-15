@@ -5,10 +5,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
-      - "443:443"
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
     environment:
       - VITE_API_URL=/api
     depends_on:
@@ -16,15 +12,6 @@ services:
     networks:
       - ai-bridge
 
-  certbot:
-    image: certbot/certbot
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
-    # certbot checks for renewals every 12 hours
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-    networks:
-      - ai-bridge
 
   backend:
     build:
