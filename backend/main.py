@@ -31,7 +31,7 @@ def read_root():
     return {"message": "MarkDownMaster API is running"}
 
 @app.post("/api/upload")
-async def upload_pdf(file: UploadFile = File(...), task_id: str = Form(None)):
+def upload_pdf(file: UploadFile = File(...), task_id: str = Form(None)):
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
     
@@ -42,7 +42,7 @@ async def upload_pdf(file: UploadFile = File(...), task_id: str = Form(None)):
         progress_store[task_id] = {"message": "Saving uploaded file...", "percent": 5}
         
     with open(pdf_path, "wb") as buffer:
-        buffer.write(await file.read())
+        buffer.write(file.file.read())
         
     try:
         if task_id:
