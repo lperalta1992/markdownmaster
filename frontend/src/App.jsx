@@ -11,6 +11,8 @@ function App() {
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [notification, setNotification] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progressState, setProgressState] = useState({ message: '', percent: 0, error: false });
+  const pollIntervalRef = useRef(null);
   
   // Document Viewer State
   const [viewingDoc, setViewingDoc] = useState(null);
@@ -49,14 +51,33 @@ function App() {
     }
 
     setIsProcessing(true);
+    setProgressState({ message: 'Initializing...', percent: 0, error: false });
+    const taskId = crypto.randomUUID();
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('task_id', taskId);
+
+    // Start polling
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const pRes = await fetch(`${API_URL}/progress/${taskId}`);
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          setProgressState(pData);
+          if (pData.error) clearInterval(pollIntervalRef.current);
+        }
+      } catch (e) {
+        console.error("Polling error:", e);
+      }
+    }, 1500);
 
     try {
       const res = await fetch(`${API_URL}/upload`, {
         method: 'POST',
         body: formData,
       });
+      
+      clearInterval(pollIntervalRef.current);
       
       if (!res.ok) throw new Error('Upload failed');
       
@@ -65,6 +86,8 @@ function App() {
       setActiveTab('manage');
     } catch (err) {
       console.error(err);
+      clearInterval(pollIntervalRef.current);
+      setProgressState({ message: 'Error processing PDF', percent: 0, error: true });
       showNotification('Error processing PDF', true);
     } finally {
       setIsProcessing(false);
@@ -227,8 +250,18 @@ function App() {
               <>
                 <Loader size={64} className="spinner" />
                 <h2>Knowledge Engineer is Processing...</h2>
-                <p>Extracting structure and formatting markdown in chunks.</p>
-                <p style={{ color: '#00f2fe', marginTop: '1rem' }}>This may take a while for large files!</p>
+                
+                {/* Progress Bar UI */}
+                <div style={{ width: '80%', maxWidth: '400px', marginTop: '1.5rem', background: 'rgba(255,255,255,0.1)', borderRadius: '1rem', overflow: 'hidden' }}>
+                  <div style={{ 
+                    height: '8px', 
+                    width: `${progressState.percent}%`, 
+                    background: progressState.error ? '#ef4444' : 'var(--accent-primary)',
+                    transition: 'width 0.5s ease-out'
+                  }}></div>
+                </div>
+                <p style={{ marginTop: '0.5rem', fontWeight: 'bold' }}>{progressState.message || "Working..."} ({progressState.percent}%)</p>
+                <p style={{ color: '#00f2fe', marginTop: '1rem', fontSize: '0.8rem' }}>This may take a while for large files!</p>
               </>
             ) : (
               <>

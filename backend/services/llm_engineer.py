@@ -7,7 +7,7 @@ OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 DEFAULT_MODEL = "llama3"
 CHUNK_SIZE = 10000  # Characters (~2500 tokens), safe for default 4096 context
 
-def process_text_with_llm(raw_text: str, model: str = DEFAULT_MODEL) -> str:
+def process_text_with_llm(raw_text: str, model: str = DEFAULT_MODEL, progress_callback=None) -> str:
     """
     Sends raw text to the local Ollama LLM in chunks to avoid context limit errors.
     Structures the text into optimized Markdown and discards noise.
@@ -19,6 +19,11 @@ def process_text_with_llm(raw_text: str, model: str = DEFAULT_MODEL) -> str:
     full_markdown = ""
     
     for i, chunk in enumerate(chunks):
+        if progress_callback:
+            # Calculate percentage from 20% to 95% (leaving 5% for saving)
+            pct = 20 + int((i / len(chunks)) * 75)
+            progress_callback(f"Thinking... Processing chunk {i+1} of {len(chunks)}", pct)
+            
         print(f"Processing chunk {i+1}/{len(chunks)}...")
         
         prompt = f"""You are an expert knowledge engineer. Your task is to take the following raw text extracted from a PDF and convert it into a highly structured, readable, and AI-optimized Markdown format.

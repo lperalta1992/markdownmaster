@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from pydantic import BaseModel
 from typing import List
 import uuid
@@ -11,6 +11,9 @@ app = FastAPI(title="MarkDownMaster API")
 
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
+
+# Global store for task progress
+progress_store = {}
 
 class MergeRequest(BaseModel):
     file_ids: List[str]
@@ -28,26 +31,39 @@ def read_root():
     return {"message": "MarkDownMaster API is running"}
 
 @app.post("/api/upload")
-async def upload_pdf(file: UploadFile = File(...)):
+async def upload_pdf(file: UploadFile = File(...), task_id: str = Form(None)):
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
     
     file_id = str(uuid.uuid4())
     pdf_path = os.path.join(DATA_DIR, f"{file_id}.pdf")
     
+    if task_id:
+        progress_store[task_id] = {"message": "Saving uploaded file...", "percent": 5}
+        
     with open(pdf_path, "wb") as buffer:
         buffer.write(await file.read())
         
     try:
+        if task_id:
+            progress_store[task_id] = {"message": "Extracting raw text from PDF...", "percent": 15}
+            
         # Extract raw text
         raw_text = extract_text_from_pdf(pdf_path)
         
+        def update_progress(msg, pct):
+            if task_id:
+                progress_store[task_id] = {"message": msg, "percent": pct}
+        
         # Process with LLM
-        markdown_content = process_text_with_llm(raw_text)
+        markdown_content = process_text_with_llm(raw_text, progress_callback=update_progress)
         
         md_path = os.path.join(DATA_DIR, f"{file_id}.md")
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(markdown_content)
+            
+        if task_id:
+            progress_store[task_id] = {"message": "Finished! Saving document...", "percent": 100}
             
         return {
             "message": "File processed successfully",
@@ -56,7 +72,13 @@ async def upload_pdf(file: UploadFile = File(...)):
             "status": "completed"
         }
     except Exception as e:
+        if task_id:
+            progress_store[task_id] = {"message": f"Error: {str(e)}", "percent": 0, "error": True}
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/progress/{task_id}")
+def get_progress(task_id: str):
+    return progress_store.get(task_id, {"message": "Initializing...", "percent": 0})
 
 @app.get("/api/documents")
 def list_documents():
