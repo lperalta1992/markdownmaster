@@ -5,7 +5,7 @@ from typing import List
 import uuid
 
 from services.pdf_extractor import extract_text_from_pdf
-from services.llm_engineer import process_text_with_llm
+from services.llm_engineer import process_text_with_llm, chat_with_llm
 
 app = FastAPI(title="MarkDownMaster API")
 
@@ -15,6 +15,13 @@ os.makedirs(DATA_DIR, exist_ok=True)
 class MergeRequest(BaseModel):
     file_ids: List[str]
     merged_filename: str = "merged_output.md"
+
+class SaveRequest(BaseModel):
+    content: str
+
+class ChatRequest(BaseModel):
+    question: str
+    context: str = ""
 
 @app.get("/api/")
 def read_root():
@@ -71,6 +78,25 @@ def get_document(file_id: str):
     with open(md_path, "r", encoding="utf-8") as f:
         content = f.read()
     return {"id": file_id, "content": content}
+
+@app.put("/api/documents/{file_id}")
+def update_document(file_id: str, request: SaveRequest):
+    md_path = os.path.join(DATA_DIR, f"{file_id}.md")
+    if not os.path.exists(md_path):
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write(request.content)
+    return {"message": "Document saved successfully"}
+
+@app.post("/api/documents/{file_id}/chat")
+def document_chat(file_id: str, request: ChatRequest):
+    md_path = os.path.join(DATA_DIR, f"{file_id}.md")
+    if not os.path.exists(md_path):
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    answer = chat_with_llm(request.question, request.context)
+    return {"answer": answer}
 
 @app.post("/api/merge")
 def merge_documents(request: MergeRequest):

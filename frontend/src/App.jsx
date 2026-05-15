@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { UploadCloud, FileText, Merge, File, Loader } from 'lucide-react';
+import { useState, useRef } from 'react';
+import Editor from '@monaco-editor/react';
+import { UploadCloud, FileText, Merge, File, Loader, Save, MessageSquare, Send, ArrowLeft } from 'lucide-react';
 import './index.css';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -10,7 +11,17 @@ function App() {
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [notification, setNotification] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Document Viewer State
   const [viewingDoc, setViewingDoc] = useState(null);
+  const [editorContent, setEditorContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const editorRef = useRef(null);
+
+  // Chat State
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatting, setIsChatting] = useState(false);
 
   const showNotification = (message, isError = false) => {
     setNotification({ message, isError });
@@ -98,9 +109,72 @@ function App() {
       const res = await fetch(`${API_URL}/documents/${id}`);
       const data = await res.json();
       setViewingDoc(data);
+      setEditorContent(data.content);
+      setChatMessages([{ role: 'assistant', content: 'Hello! I am your document assistant. Highlight text in the editor and ask me a question about it!' }]);
     } catch (err) {
       console.error(err);
       showNotification('Error loading document', true);
+    }
+  };
+
+  const handleEditorDidMount = (editor) => {
+    editorRef.current = editor;
+  };
+
+  const saveDocument = async () => {
+    if (!viewingDoc) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch(`${API_URL}/documents/${viewingDoc.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editorContent })
+      });
+      if (!res.ok) throw new Error('Save failed');
+      showNotification('Document saved successfully!');
+    } catch (err) {
+      console.error(err);
+      showNotification('Error saving document', true);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const sendChatMessage = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !viewingDoc) return;
+
+    const question = chatInput.trim();
+    setChatInput('');
+    
+    // Get selected text from Monaco Editor for context
+    let selectedText = "";
+    if (editorRef.current) {
+      const selection = editorRef.current.getSelection();
+      selectedText = editorRef.current.getModel().getValueInRange(selection);
+    }
+
+    // Add user message to UI
+    const newMessages = [...chatMessages, { role: 'user', content: question, context: selectedText }];
+    setChatMessages(newMessages);
+    setIsChatting(true);
+
+    try {
+      const res = await fetch(`${API_URL}/documents/${viewingDoc.id}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, context: selectedText })
+      });
+      
+      if (!res.ok) throw new Error('Chat failed');
+      const data = await res.json();
+      
+      setChatMessages([...newMessages, { role: 'assistant', content: data.answer }]);
+    } catch (err) {
+      console.error(err);
+      setChatMessages([...newMessages, { role: 'assistant', content: 'Error: Could not reach the LLM.' }]);
+    } finally {
+      setIsChatting(false);
     }
   };
 
@@ -116,28 +190,31 @@ function App() {
         <p>AI-Powered Knowledge Engineer for your PDFs</p>
       </header>
 
-      <main className="glass-panel" style={{ gridColumn: '1 / -1' }}>
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-          <button 
-            className={`btn ${activeTab === 'upload' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => { setActiveTab('upload'); setViewingDoc(null); }}
-          >
-            <UploadCloud size={20} /> Convert PDF
-          </button>
-          <button 
-            className={`btn ${activeTab === 'manage' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => { setActiveTab('manage'); fetchDocuments(); setViewingDoc(null); }}
-          >
-            <FileText size={20} /> Manage & Merge
-          </button>
-        </div>
+      <main className="glass-panel" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
+        
+        {!viewingDoc && (
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+            <button 
+              className={`btn ${activeTab === 'upload' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setActiveTab('upload')}
+            >
+              <UploadCloud size={20} /> Convert PDF
+            </button>
+            <button 
+              className={`btn ${activeTab === 'manage' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => { setActiveTab('manage'); fetchDocuments(); }}
+            >
+              <FileText size={20} /> Manage & Merge
+            </button>
+          </div>
+        )}
 
-        {activeTab === 'upload' && (
+        {activeTab === 'upload' && !viewingDoc && (
           <div 
             className={`upload-zone ${isProcessing ? 'processing' : ''}`}
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleFileUpload}
-            onClick={() => document.getElementById('file-upload').click()}
+            onClick={() => !isProcessing && document.getElementById('file-upload').click()}
           >
             <input 
               type="file" 
@@ -150,7 +227,8 @@ function App() {
               <>
                 <Loader size={64} className="spinner" />
                 <h2>Knowledge Engineer is Processing...</h2>
-                <p>Extracting structure and formatting markdown via local LLM.</p>
+                <p>Extracting structure and formatting markdown in chunks.</p>
+                <p style={{ color: '#00f2fe', marginTop: '1rem' }}>This may take a while for large files!</p>
               </>
             ) : (
               <>
@@ -163,7 +241,7 @@ function App() {
         )}
 
         {activeTab === 'manage' && !viewingDoc && (
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h2>Processed Documents</h2>
               <button 
@@ -191,7 +269,7 @@ function App() {
                       <span>{doc.filename}</span>
                     </div>
                     <div className="doc-actions" onClick={e => e.stopPropagation()}>
-                      <button className="action-btn" onClick={() => viewDocument(doc.id)}>
+                      <button className="action-btn" onClick={() => viewDocument(doc.id)} title="Open Editor">
                         <FileText size={20} />
                       </button>
                     </div>
@@ -203,13 +281,76 @@ function App() {
         )}
 
         {viewingDoc && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2>Viewing: {viewingDoc.id}</h2>
-              <button className="btn btn-secondary" onClick={() => setViewingDoc(null)}>Back</button>
+          <div className="editor-layout">
+            <div className="editor-header">
+              <button className="btn btn-secondary" onClick={() => setViewingDoc(null)}>
+                <ArrowLeft size={16} /> Back
+              </button>
+              <h3 style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {viewingDoc.id}.md
+              </h3>
+              <button className="btn btn-primary" onClick={saveDocument} disabled={isSaving}>
+                {isSaving ? <Loader size={16} className="spinner" /> : <Save size={16} />}
+                Save Changes
+              </button>
             </div>
-            <div className="content-viewer">
-              {viewingDoc.content}
+
+            <div className="editor-main">
+              <div className="editor-pane">
+                <Editor
+                  height="100%"
+                  defaultLanguage="markdown"
+                  theme="vs-dark"
+                  value={editorContent}
+                  onChange={(val) => setEditorContent(val)}
+                  onMount={handleEditorDidMount}
+                  options={{
+                    wordWrap: 'on',
+                    minimap: { enabled: true },
+                    fontSize: 14,
+                    padding: { top: 16 }
+                  }}
+                />
+              </div>
+              
+              <div className="chat-pane">
+                <div className="chat-header">
+                  <MessageSquare size={18} />
+                  <span>Document Assistant</span>
+                </div>
+                
+                <div className="chat-messages">
+                  {chatMessages.map((msg, idx) => (
+                    <div key={idx} className={`chat-message ${msg.role}`}>
+                      {msg.context && (
+                        <div className="chat-context-preview">
+                          <strong>Context:</strong> "{msg.context.length > 50 ? msg.context.substring(0, 50) + '...' : msg.context}"
+                        </div>
+                      )}
+                      <div className="message-content">{msg.content}</div>
+                    </div>
+                  ))}
+                  {isChatting && (
+                    <div className="chat-message assistant">
+                      <Loader size={16} className="spinner" style={{ display: 'inline-block' }} /> 
+                      <span style={{ marginLeft: '8px' }}>Thinking...</span>
+                    </div>
+                  )}
+                </div>
+
+                <form className="chat-input-area" onSubmit={sendChatMessage}>
+                  <input 
+                    type="text" 
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Ask about highlighted text..."
+                    disabled={isChatting}
+                  />
+                  <button type="submit" disabled={isChatting || !chatInput.trim()}>
+                    <Send size={18} />
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         )}
