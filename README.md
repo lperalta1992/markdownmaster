@@ -10,6 +10,7 @@ Powered entirely by local LLMs via Ollama, it ensures absolute data privacy. It 
 
 - **Intelligent PDF Processing**: Automatically extracts text from PDFs and structures it into Markdown.
 - **Smart Chunking for Large Files**: Bypasses the strict token limits of LLMs by breaking massive PDFs into 10,000-character chunks. The LLM processes each chunk sequentially with zero data loss.
+- **Real-Time Progress Tracking**: A sleek, animated progress bar powered by a robust backend polling mechanism visually tracks the AI's step-by-step thinking and chunking process.
 - **Automated Noise Filtering**: The AI is strictly prompted to identify and delete PDF artifacts such as page numbers, headers, footers, trademarks, copyright text, and formality sections.
 - **High-Performance Editor**: Built-in **Monaco Editor** (the engine behind VS Code) provides virtualized rendering, syntax highlighting, and lightning-fast search (`Ctrl+F`) for Markdown files exceeding 5MB+.
 - **Context-Aware LLM Chat**: A built-in Document Assistant. Simply highlight any text in the editor and ask a question; the LLM will answer using exclusively your selected text as context.
@@ -46,9 +47,22 @@ MarkDownMaster/
 
 ## 🚀 Setup & Installation
 
-### Prerequisites
-- Docker and Docker Compose (V2)
-- At least 8GB of RAM (to run the local `llama3` model comfortably).
+### Prerequisites & Hardware Requirements
+Docker and Docker Compose (V2) are required to orchestrate the environment.
+
+Running the `llama3` 8B model locally is resource-intensive. Below are the hardware requirements:
+
+**Recommended (GPU - Fastest & Best Experience):**
+- **Hardware:** Dedicated Nvidia GPU with 16GB+ VRAM (e.g., Nvidia T4, L4, or A10G) + 16GB RAM.
+- **AWS Equivalent:** `g4dn.xlarge` (~$0.52/hr). 
+- **Notes:** Processing is virtually instantaneous. You must install the `nvidia-container-toolkit` on the host and uncomment the `deploy: resources:` block in `docker-compose.yml`.
+
+**Minimum (CPU-Only - Slow but Functional):**
+- **Hardware:** 8+ modern CPU Cores and 16GB to 32GB RAM.
+- **AWS Equivalent:** `c6i.2xlarge` or `m6i.2xlarge` (~$0.34/hr).
+- **Notes:** The model will fit into RAM, but processing a chunk might take 30-60 seconds depending on CPU single-thread performance. 
+
+*(Warning: Running this on VMs with 2 CPUs and <8GB of RAM will cause Linux to hit Out-Of-Memory boundaries and crash or freeze indefinitely during inference).*
 
 ### 1. Start the Environment
 Clone the repository and spin up the containers.
