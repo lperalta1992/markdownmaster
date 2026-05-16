@@ -1,12 +1,8 @@
 # Start MarkDownMaster locally (Bypasses Docker Hub issues)
 
-Write-Host "Starting Ollama via Docker..." -ForegroundColor Cyan
-# Start only the ollama service, which was successfully pulled earlier
-docker-compose up ollama -d
-
 Write-Host "Starting Backend..." -ForegroundColor Cyan
 # Start the backend in a new window
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd backend; & '.\.venv\Scripts\uvicorn.exe' main:app --host 0.0.0.0 --port 8000 --reload"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:OLLAMA_HOST='http://100.100.183.43:11434'; cd backend; & '.\.venv\Scripts\uvicorn.exe' main:app --host 0.0.0.0 --port 8000 --reload"
 
 Write-Host "Starting Frontend..." -ForegroundColor Cyan
 # Start the frontend in a new window
