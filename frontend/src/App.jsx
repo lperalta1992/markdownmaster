@@ -1,6 +1,32 @@
-import { useState, useRef } from 'react';
-import Editor from '@monaco-editor/react';
-import { UploadCloud, FileText, Merge, File, Loader, Save, MessageSquare, Send, ArrowLeft } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import Editor, { loader } from '@monaco-editor/react';
+import * as monaco from 'monaco-editor';
+import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
+import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
+import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
+import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+import { UploadCloud, FileText, Merge, File, Loader, Save, MessageSquare, Send, ArrowLeft, ChevronRight } from 'lucide-react';
+
+self.MonacoEnvironment = {
+  getWorker(_, label) {
+    if (label === 'json') {
+      return new jsonWorker();
+    }
+    if (label === 'css' || label === 'scss' || label === 'less') {
+      return new cssWorker();
+    }
+    if (label === 'html' || label === 'handlebars' || label === 'razor') {
+      return new htmlWorker();
+    }
+    if (label === 'typescript' || label === 'javascript') {
+      return new tsWorker();
+    }
+    return new editorWorker();
+  },
+};
+
+loader.config({ monaco });
 import './index.css';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -24,6 +50,14 @@ function App() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isChatting, setIsChatting] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(true);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, isChatting, isChatOpen]);
 
   const showNotification = (message, isError = false) => {
     setNotification({ message, isError });
@@ -329,7 +363,7 @@ function App() {
             </div>
 
             <div className="editor-main">
-              <div className="editor-pane">
+              <div className={`editor-pane ${!isChatOpen ? 'expanded' : ''}`}>
                 <Editor
                   height="100%"
                   defaultLanguage="markdown"
@@ -344,12 +378,22 @@ function App() {
                     padding: { top: 16 }
                   }}
                 />
+                {!isChatOpen && (
+                  <button className="chat-toggle-floating" onClick={() => setIsChatOpen(true)} title="Open Assistant">
+                    <MessageSquare size={20} />
+                  </button>
+                )}
               </div>
               
-              <div className="chat-pane">
+              <div className={`chat-pane ${isChatOpen ? 'open' : 'closed'}`}>
                 <div className="chat-header">
-                  <MessageSquare size={18} />
-                  <span>Document Assistant</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <MessageSquare size={18} />
+                    <span>Document Assistant</span>
+                  </div>
+                  <button className="action-btn" onClick={() => setIsChatOpen(false)} title="Collapse Chat">
+                    <ChevronRight size={18} />
+                  </button>
                 </div>
                 
                 <div className="chat-messages">
@@ -364,11 +408,13 @@ function App() {
                     </div>
                   ))}
                   {isChatting && (
-                    <div className="chat-message assistant">
-                      <Loader size={16} className="spinner" style={{ display: 'inline-block' }} /> 
-                      <span style={{ marginLeft: '8px' }}>Thinking...</span>
+                    <div className="chat-message assistant thinking">
+                      <div className="typing-indicator">
+                        <span></span><span></span><span></span>
+                      </div>
                     </div>
                   )}
+                  <div ref={chatEndRef} />
                 </div>
 
                 <form className="chat-input-area" onSubmit={sendChatMessage}>
