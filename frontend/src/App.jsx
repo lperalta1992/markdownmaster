@@ -6,7 +6,9 @@ import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
-import { UploadCloud, FileText, Merge, File, Loader, Save, MessageSquare, Send, ArrowLeft, ChevronRight } from 'lucide-react';
+import { UploadCloud, FileText, Merge, File, Loader, Save, MessageSquare, Send, ArrowLeft, ChevronRight, Download, Edit2, Trash2, Maximize, Minimize, Columns } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 self.MonacoEnvironment = {
   getWorker(_, label) {
@@ -53,6 +55,12 @@ function App() {
   const [isChatOpen, setIsChatOpen] = useState(true);
   const chatEndRef = useRef(null);
 
+  // Editor Enhanced State
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isSplitView, setIsSplitView] = useState(false);
+  const [editingDocId, setEditingDocId] = useState(null);
+  const [newDocName, setNewDocName] = useState('');
+
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -72,6 +80,62 @@ function App() {
     } catch (err) {
       console.error(err);
       showNotification('Failed to fetch documents', true);
+    }
+  };
+
+  const handleDownload = async (id, filename) => {
+    try {
+      const res = await fetch(`${API_URL}/documents/${id}`);
+      const data = await res.json();
+      const blob = new Blob([data.content], { type: 'text/markdown' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error(err);
+      showNotification('Error downloading document', true);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+    try {
+      const res = await fetch(`${API_URL}/documents/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed');
+      showNotification('Document deleted');
+      fetchDocuments();
+    } catch (err) {
+      console.error(err);
+      showNotification('Error deleting document', true);
+    }
+  };
+
+  const handleRename = async (id) => {
+    if (!newDocName.trim()) {
+      setEditingDocId(null);
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/documents/${id}/rename`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_filename: newDocName })
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || 'Rename failed');
+      }
+      showNotification('Document renamed successfully');
+      setEditingDocId(null);
+      fetchDocuments();
+    } catch (err) {
+      console.error(err);
+      showNotification(`Error: ${err.message}`, true);
     }
   };
 
@@ -331,15 +395,43 @@ function App() {
                     className={`document-item ${selectedDocs.includes(doc.id) ? 'selected' : ''}`}
                     onClick={() => toggleDocSelection(doc.id)}
                   >
-                    <div className="doc-info">
+                    <div className="doc-info" style={{ flex: 1 }}>
                       <File className="doc-icon" size={24} />
-                      <span>{doc.filename}</span>
+                      {editingDocId === doc.id ? (
+                        <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                          <input 
+                            type="text" 
+                            value={newDocName} 
+                            onChange={(e) => setNewDocName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleRename(doc.id)}
+                            autoFocus
+                            style={{ flex: 1, padding: '0.25rem', background: 'transparent', color: 'white', border: '1px solid var(--accent-primary)', borderRadius: '4px' }}
+                          />
+                          <button className="btn btn-primary" style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }} onClick={() => handleRename(doc.id)}>Save</button>
+                          <button className="btn btn-secondary" style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }} onClick={() => setEditingDocId(null)}>Cancel</button>
+                        </div>
+                      ) : (
+                        <span>{doc.filename}</span>
+                      )}
                     </div>
-                    <div className="doc-actions" onClick={e => e.stopPropagation()}>
-                      <button className="action-btn" onClick={() => viewDocument(doc.id)} title="Open Editor">
-                        <FileText size={20} />
-                      </button>
-                    </div>
+                    
+                    {!editingDocId && (
+                      <div className="doc-actions" onClick={e => e.stopPropagation()}>
+                        <button className="action-btn" onClick={() => { setEditingDocId(doc.id); setNewDocName(doc.filename); }} title="Rename">
+                          <Edit2 size={18} />
+                        </button>
+                        <button className="action-btn" onClick={() => handleDownload(doc.id, doc.filename)} title="Download">
+                          <Download size={18} />
+                        </button>
+                        <button className="action-btn" onClick={() => handleDelete(doc.id)} title="Delete" style={{ color: '#ef4444' }}>
+                          <Trash2 size={18} />
+                        </button>
+                        <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 0.25rem' }}></div>
+                        <button className="action-btn" onClick={() => viewDocument(doc.id)} title="Open Editor" style={{ color: 'var(--accent-primary)' }}>
+                          <FileText size={20} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -348,36 +440,60 @@ function App() {
         )}
 
         {viewingDoc && (
-          <div className="editor-layout">
+          <div className={`editor-layout ${isFullScreen ? 'full-screen' : ''}`}>
             <div className="editor-header">
-              <button className="btn btn-secondary" onClick={() => setViewingDoc(null)}>
+              <button className="btn btn-secondary" onClick={() => { setViewingDoc(null); setIsFullScreen(false); }}>
                 <ArrowLeft size={16} /> Back
               </button>
-              <h3 style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <h3 style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'center' }}>
                 {viewingDoc.id}.md
               </h3>
-              <button className="btn btn-primary" onClick={saveDocument} disabled={isSaving}>
-                {isSaving ? <Loader size={16} className="spinner" /> : <Save size={16} />}
-                Save Changes
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className={`btn ${isSplitView ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setIsSplitView(!isSplitView)} title="Toggle Preview">
+                  <Columns size={16} />
+                  <span className="hide-mobile">Preview</span>
+                </button>
+                <button className="btn btn-secondary" onClick={() => setIsFullScreen(!isFullScreen)} title="Full Screen">
+                  {isFullScreen ? <Minimize size={16} /> : <Maximize size={16} />}
+                </button>
+                <button className="btn btn-primary" onClick={saveDocument} disabled={isSaving}>
+                  {isSaving ? <Loader size={16} className="spinner" /> : <Save size={16} />}
+                  Save
+                </button>
+              </div>
             </div>
 
             <div className="editor-main">
               <div className={`editor-pane ${!isChatOpen ? 'expanded' : ''}`}>
-                <Editor
-                  height="100%"
-                  defaultLanguage="markdown"
-                  theme="vs-dark"
-                  value={editorContent}
-                  onChange={(val) => setEditorContent(val)}
-                  onMount={handleEditorDidMount}
-                  options={{
-                    wordWrap: 'on',
-                    minimap: { enabled: true },
-                    fontSize: 14,
-                    padding: { top: 16 }
-                  }}
-                />
+                <div className="split-pane-container" style={{ display: 'flex', height: '100%', width: '100%' }}>
+                  <div className="split-editor-side" style={{ flex: isSplitView ? 1 : 'auto', width: isSplitView ? '50%' : '100%', height: '100%' }}>
+                    <Editor
+                      height="100%"
+                      defaultLanguage="markdown"
+                      theme="vs-dark"
+                      value={editorContent}
+                      onChange={(val) => setEditorContent(val)}
+                      onMount={handleEditorDidMount}
+                      options={{
+                        wordWrap: 'on',
+                        minimap: { enabled: true },
+                        fontSize: 14,
+                        padding: { top: 16 }
+                      }}
+                    />
+                  </div>
+                  
+                  {isSplitView && (
+                    <div className="split-preview-side" style={{ flex: 1, width: '50%', height: '100%', overflowY: 'auto', padding: '1.5rem', background: 'var(--bg-primary)', borderLeft: '1px solid var(--border-color)' }}>
+                      <div className="markdown-preview">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {editorContent}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {!isChatOpen && (
                   <button className="chat-toggle-floating" onClick={() => setIsChatOpen(true)} title="Open Assistant">
                     <MessageSquare size={20} />

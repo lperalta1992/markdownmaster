@@ -13,6 +13,8 @@ Powered entirely by local LLMs via Ollama, it ensures absolute data privacy. It 
 - **Real-Time Progress Tracking**: A sleek, animated progress bar powered by a robust backend polling mechanism visually tracks the AI's step-by-step thinking and chunking process.
 - **Automated Noise Filtering**: The AI is strictly prompted to identify and delete PDF artifacts such as page numbers, headers, footers, trademarks, copyright text, and formality sections.
 - **High-Performance Editor**: Built-in **Monaco Editor** (the engine behind VS Code) provides virtualized rendering, syntax highlighting, and lightning-fast search (`Ctrl+F`) for Markdown files exceeding 5MB+.
+- **Split-View Preview & Full Screen**: Work completely distraction-free with a full-screen toggle, and render your Markdown in real-time in an elegant, split-pane HTML preview powered by `react-markdown`.
+- **Robust File Management**: Instantly rename, download, and delete processed Markdown files directly from the user interface.
 - **Context-Aware LLM Chat**: A built-in Document Assistant. Simply highlight any text in the editor and ask a question; the LLM will answer using exclusively your selected text as context.
 - **Secure Architecture**: Pre-configured with Nginx to run flawlessly behind Cloudflare Zero Trust tunnels, completely isolating the backend from the public internet.
 
@@ -94,6 +96,8 @@ If you are running this behind a **Cloudflare Tunnel**, simply map your Public H
 - `POST /api/upload`: Handles PDF uploads, extracts text, calls the LLM engineer for chunking/structuring, and saves the final `.md` file.
 - `GET /api/documents/{file_id}`: Retrieves the content of a structured Markdown file for the frontend editor.
 - `PUT /api/documents/{file_id}`: Overwrites the existing document with manual edits made in the Monaco editor.
+- `PUT /api/documents/{file_id}/rename`: Renames a document safely in the filesystem.
+- `DELETE /api/documents/{file_id}`: Deletes a document.
 - `POST /api/documents/{file_id}/chat`: Accepts a user question and highlighted context, passing it to the LLM for an answer.
 
 ### LLM Engineer (`backend/services/llm_engineer.py`)
@@ -101,9 +105,9 @@ If you are running this behind a **Cloudflare Tunnel**, simply map your Public H
 - `chat_with_llm(question, context)`: Sends a focused prompt to the LLM to answer the user's question strictly based on the provided highlighted text.
 
 ### Frontend (`frontend/src/App.jsx`)
-- **Two-Pane Layout**: Conditionally renders an upload drag-and-drop zone or the advanced editor layout.
-- **Monaco Editor Integration**: Manages the state of the active document, handling high-performance rendering for massive files.
-- **Chat State Management**: Captures the highlighted selection from the Monaco Editor reference and appends it as context to the API request for the Document Assistant.
+- **Interactive File List**: Inline utilities to manage your generated documents (download, rename, delete).
+- **Advanced Editor Workspace**: Features a flexible layout supporting Full-Screen mode, Split-View live rendering of Markdown to HTML, and a sliding glassmorphism Chat Drawer.
+- **Chat Context Extraction**: Captures the highlighted selection from the Monaco Editor reference and appends it as context to the API request for the Document Assistant.
 
 ---
 
@@ -118,6 +122,7 @@ If you are running this behind a **Cloudflare Tunnel**, simply map your Public H
 **Frontend:**
 - `react` & `vite` (Core framework and bundler)
 - `@monaco-editor/react` (High-performance text editor engine)
+- `react-markdown` & `remark-gfm` (Live Markdown to HTML rendering)
 - `lucide-react` (Modern SVG icon library)
 
 **Infrastructure:**

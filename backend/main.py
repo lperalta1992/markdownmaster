@@ -22,6 +22,9 @@ class MergeRequest(BaseModel):
 class SaveRequest(BaseModel):
     content: str
 
+class RenameRequest(BaseModel):
+    new_filename: str
+
 class ChatRequest(BaseModel):
     question: str
     context: str = ""
@@ -110,6 +113,32 @@ def update_document(file_id: str, request: SaveRequest):
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(request.content)
     return {"message": "Document saved successfully"}
+
+@app.delete("/api/documents/{file_id}")
+def delete_document(file_id: str):
+    md_path = os.path.join(DATA_DIR, f"{file_id}.md")
+    if not os.path.exists(md_path):
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    os.remove(md_path)
+    return {"message": "Document deleted successfully"}
+
+@app.put("/api/documents/{file_id}/rename")
+def rename_document(file_id: str, request: RenameRequest):
+    old_path = os.path.join(DATA_DIR, f"{file_id}.md")
+    if not os.path.exists(old_path):
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    new_id = request.new_filename
+    if new_id.endswith('.md'):
+        new_id = new_id[:-3]
+        
+    new_path = os.path.join(DATA_DIR, f"{new_id}.md")
+    if os.path.exists(new_path) and old_path != new_path:
+        raise HTTPException(status_code=400, detail="A document with that name already exists")
+        
+    os.rename(old_path, new_path)
+    return {"message": "Document renamed successfully", "new_id": new_id}
 
 @app.post("/api/documents/{file_id}/chat")
 def document_chat(file_id: str, request: ChatRequest):

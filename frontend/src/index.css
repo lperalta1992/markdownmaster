@@ -572,3 +572,111 @@ header p {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* Full Screen Mode */
+.editor-layout.full-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  border-radius: 0;
+  border: none;
+  margin: 0;
+  max-width: 100%;
+}
+
+/* Hide elements when on mobile or small screens */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none;
+  }
+}
+
+/* Markdown Preview Styling */
+.markdown-preview {
+  color: var(--text-primary);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4,
+.markdown-preview h5,
+.markdown-preview h6 {
+  color: var(--text-primary);
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown-preview h1 { font-size: 2em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+.markdown-preview h2 { font-size: 1.5em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+.markdown-preview h3 { font-size: 1.25em; }
+
+.markdown-preview p,
+.markdown-preview blockquote,
+.markdown-preview ul,
+.markdown-preview ol,
+.markdown-preview dl,
+.markdown-preview table,
+.markdown-preview pre {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.markdown-preview blockquote {
+  padding: 0 1em;
+  color: var(--text-muted);
+  border-left: 0.25em solid var(--border-color);
+  margin: 0;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+  padding-left: 2em;
+}
+
+.markdown-preview code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+}
+
+.markdown-preview pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: var(--bg-primary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.markdown-preview pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.markdown-preview table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.markdown-preview table th,
+.markdown-preview table td {
+  padding: 6px 13px;
+  border: 1px solid var(--border-color);
+}
+
+.markdown-preview table tr:nth-child(2n) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
