@@ -40,7 +40,7 @@ MarkDownMaster/
 │   ├── Dockerfile            # Multi-stage Vite build serving static files via Nginx
 │   ├── nginx.conf            # Custom Nginx proxy configuration
 │   └── package.json          # Frontend dependencies
-└── docker-compose.yml        # Orchestrates frontend, backend, and ollama services
+└── docker-compose.yml        # Orchestrates frontend and backend services (connects to external Ollama node)
 ```
 
 ---
@@ -72,12 +72,12 @@ cd markdownmaster
 docker compose up -d --build
 ```
 
-### 2. Download the LLM Model
-Because the `ollama` container starts empty, you must download the `llama3` model before uploading your first PDF. Run this command on your host machine:
+### 2. Configure the LLM Model
+Ensure that your external Ollama instance at `http://100.100.183.43:11434` is running and has the `llama3` model installed.
+You can install it on your external node by running:
 ```bash
-docker compose exec ollama ollama pull llama3
+ollama pull llama3
 ```
-*(This will download approximately ~4.7GB of model weights).*
 
 ### 3. Access the Application
 The application runs locally on **port 8080**.

@@ -346,6 +346,7 @@ header p {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 65vh;
   height: calc(100vh - 200px);
   background: #000;
   border-radius: var(--radius-md);
@@ -367,12 +368,14 @@ header p {
   flex: 1;
   overflow: hidden;
   position: relative;
+  height: 100%;
 }
 
 .editor-pane {
   flex: 1;
   position: relative;
   transition: padding-right var(--transition-normal);
+  height: 100%;
 }
 
 /* Chat Assistant Pane Drawer */
