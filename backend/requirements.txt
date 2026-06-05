@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 python-multipart
-PyMuPDF
+markitdown[pdf,docx,pptx,xlsx]
 requests
 pydantic
 python-dotenv

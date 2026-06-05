@@ -1,6 +1,6 @@
 # MarkDownMaster
 
-**MarkDownMaster** is an AI-powered Knowledge Engineer designed to ingest massive PDF documents and convert them into structured, highly readable, and perfectly formatted Markdown files. 
+**MarkDownMaster** is an AI-powered Knowledge Engineer designed to ingest massive documents (PDF, Word, Excel, PowerPoint, HTML, CSV) and convert them into structured, highly readable, and perfectly formatted Markdown files. 
 
 Powered entirely by local LLMs via Ollama, it ensures absolute data privacy. It also features a high-performance editing interface and a context-aware chat assistant, making it the perfect tool for processing technical manuals, books, or dense documentation.
 
@@ -8,7 +8,7 @@ Powered entirely by local LLMs via Ollama, it ensures absolute data privacy. It 
 
 ## 🌟 Key Features
 
-- **Intelligent PDF Processing**: Automatically extracts text from PDFs and structures it into Markdown.
+- **Intelligent Document Processing**: Automatically extracts text from various documents (PDF, DOCX, PPTX, XLSX, HTML) using Microsoft's MarkItDown and structures it into Markdown.
 - **Smart Chunking for Large Files**: Bypasses the strict token limits of LLMs by breaking massive PDFs into 10,000-character chunks. The LLM processes each chunk sequentially with zero data loss.
 - **Real-Time Progress Tracking**: A sleek, animated progress bar powered by a robust backend polling mechanism visually tracks the AI's step-by-step thinking and chunking process.
 - **Automated Noise Filtering**: The AI is strictly prompted to identify and delete PDF artifacts such as page numbers, headers, footers, trademarks, copyright text, and formality sections.
@@ -30,7 +30,7 @@ MarkDownMaster/
 │   ├── data/                 # Persistent storage for PDFs and Markdown files
 │   ├── services/
 │   │   ├── llm_engineer.py   # Core logic for chunking, formatting, and chatting with Ollama
-│   │   └── pdf_extractor.py  # Utility for extracting raw text via pdfplumber
+│   │   └── document_extractor.py  # Utility for extracting text via MarkItDown
 │   ├── Dockerfile            # Python 3.11 build
 │   ├── main.py               # FastAPI routing and endpoints
 │   └── requirements.txt      # Backend dependencies
@@ -93,7 +93,7 @@ If you are running this behind a **Cloudflare Tunnel**, simply map your Public H
 ## 🧩 Core Functions & Architecture
 
 ### Backend Endpoints (`backend/main.py`)
-- `POST /api/upload`: Handles PDF uploads, extracts text, calls the LLM engineer for chunking/structuring, and saves the final `.md` file.
+- `POST /api/upload`: Handles document uploads, extracts text, calls the LLM engineer for chunking/structuring (if AI tuning is enabled), and saves the final `.md` file.
 - `GET /api/documents/{file_id}`: Retrieves the content of a structured Markdown file for the frontend editor.
 - `PUT /api/documents/{file_id}`: Overwrites the existing document with manual edits made in the Monaco editor.
 - `PUT /api/documents/{file_id}/rename`: Renames a document safely in the filesystem.
@@ -115,7 +115,7 @@ If you are running this behind a **Cloudflare Tunnel**, simply map your Public H
 
 **Backend:**
 - `fastapi` & `uvicorn` (High-performance API framework)
-- `pdfplumber` (Robust PDF text extraction)
+- `markitdown` (Microsoft's robust document extraction library)
 - `requests` (Communication with the Ollama container)
 - `python-multipart` (Handling file uploads)
 

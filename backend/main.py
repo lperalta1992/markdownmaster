@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import List
 import uuid
 
-from services.pdf_extractor import extract_text_from_pdf
+from services.document_extractor import extract_text_from_document
 from services.llm_engineer import process_text_with_llm, chat_with_llm
 
 app = FastAPI(title="MarkDownMaster API")
@@ -34,32 +34,37 @@ def read_root():
     return {"message": "MarkDownMaster API is running"}
 
 @app.post("/api/upload")
-def upload_pdf(file: UploadFile = File(...), task_id: str = Form(None)):
-    if not file.filename.endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-    
+async def upload_document(file: UploadFile = File(...), use_ai_tuning: bool = Form(True), task_id: str = Form(None)):
     file_id = str(uuid.uuid4())
-    pdf_path = os.path.join(DATA_DIR, f"{file_id}.pdf")
+    # Try to keep the original extension
+    ext = os.path.splitext(file.filename)[1]
+    if not ext:
+        ext = ".bin"
+    doc_path = os.path.join(DATA_DIR, f"{file_id}{ext}")
     
     if task_id:
         progress_store[task_id] = {"message": "Saving uploaded file...", "percent": 5}
-        
-    with open(pdf_path, "wb") as buffer:
-        buffer.write(file.file.read())
+    
+    with open(doc_path, "wb") as buffer:
+        buffer.write(await file.read())
         
     try:
         if task_id:
-            progress_store[task_id] = {"message": "Extracting raw text from PDF...", "percent": 15}
+            progress_store[task_id] = {"message": "Extracting text from document...", "percent": 15}
             
-        # Extract raw text
-        raw_text = extract_text_from_pdf(pdf_path)
+        # Extract markdown from document using MarkItDown
+        extracted_md = extract_text_from_document(doc_path)
         
         def update_progress(msg, pct):
             if task_id:
                 progress_store[task_id] = {"message": msg, "percent": pct}
         
-        # Process with LLM
-        markdown_content = process_text_with_llm(raw_text, progress_callback=update_progress)
+        if use_ai_tuning:
+            # Process with LLM Knowledge Engineer
+            markdown_content = process_text_with_llm(extracted_md, progress_callback=update_progress)
+        else:
+            # Skip AI tuning, just use the raw extracted markdown
+            markdown_content = extracted_md
         
         md_path = os.path.join(DATA_DIR, f"{file_id}.md")
         with open(md_path, "w", encoding="utf-8") as f:

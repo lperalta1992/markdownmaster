@@ -39,6 +39,7 @@ function App() {
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [notification, setNotification] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [useAiTuning, setUseAiTuning] = useState(true);
   const [progressState, setProgressState] = useState({ message: '', percent: 0, error: false });
   const pollIntervalRef = useRef(null);
   
@@ -143,8 +144,8 @@ function App() {
     e.preventDefault();
     const file = e.dataTransfer ? e.dataTransfer.files[0] : e.target.files[0];
     
-    if (!file || file.type !== 'application/pdf') {
-      showNotification('Please upload a valid PDF file', true);
+    if (!file) {
+      showNotification('Please upload a valid document file', true);
       return;
     }
 
@@ -153,6 +154,7 @@ function App() {
     const taskId = crypto.randomUUID();
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('use_ai_tuning', useAiTuning);
     formData.append('task_id', taskId);
 
     // Start polling
@@ -179,14 +181,14 @@ function App() {
       
       if (!res.ok) throw new Error('Upload failed');
       
-      showNotification('PDF successfully processed by Knowledge Engineer!');
+      showNotification('Document successfully processed!');
       fetchDocuments();
       setActiveTab('manage');
     } catch (err) {
       console.error(err);
       clearInterval(pollIntervalRef.current);
-      setProgressState({ message: 'Error processing PDF', percent: 0, error: true });
-      showNotification('Error processing PDF', true);
+      setProgressState({ message: 'Error processing document', percent: 0, error: true });
+      showNotification('Error processing document', true);
     } finally {
       setIsProcessing(false);
     }
@@ -319,7 +321,7 @@ function App() {
               className={`btn ${activeTab === 'upload' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setActiveTab('upload')}
             >
-              <UploadCloud size={20} /> Convert PDF
+              <UploadCloud size={20} /> Convert Document
             </button>
             <button 
               className={`btn ${activeTab === 'manage' ? 'btn-primary' : 'btn-secondary'}`}
@@ -340,14 +342,14 @@ function App() {
             <input 
               type="file" 
               id="file-upload" 
-              accept=".pdf" 
+              accept=".pdf,.docx,.pptx,.xlsx,.html,.csv,.txt" 
               style={{ display: 'none' }} 
               onChange={handleFileUpload}
             />
             {isProcessing ? (
               <>
                 <Loader size={64} className="spinner" />
-                <h2>Knowledge Engineer is Processing...</h2>
+                <h2>{useAiTuning ? 'Knowledge Engineer is Processing...' : 'Extracting Document...'}</h2>
                 
                 {/* Progress Bar UI */}
                 <div style={{ width: '80%', maxWidth: '400px', marginTop: '1.5rem', background: 'rgba(255,255,255,0.1)', borderRadius: '1rem', overflow: 'hidden' }}>
@@ -364,8 +366,23 @@ function App() {
             ) : (
               <>
                 <UploadCloud size={64} />
-                <h2>Drag & Drop PDF here</h2>
-                <p>Or click to browse files</p>
+                <h2>Drag & Drop Document here</h2>
+                <p>Supports PDF, Word, PowerPoint, Excel, HTML, CSV</p>
+                <div 
+                  className="ai-toggle-container" 
+                  style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem 1rem', borderRadius: '0.5rem' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={useAiTuning} 
+                      onChange={(e) => setUseAiTuning(e.target.checked)} 
+                      style={{ width: '1.2rem', height: '1.2rem', accentColor: 'var(--accent-primary)' }}
+                    />
+                    <span>Tune and structure output with AI Knowledge Engineer</span>
+                  </label>
+                </div>
               </>
             )}
           </div>
