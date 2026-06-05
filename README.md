@@ -9,9 +9,10 @@ Powered entirely by local LLMs via Ollama, it ensures absolute data privacy. It 
 ## 🌟 Key Features
 
 - **Intelligent Document Processing**: Automatically extracts text from various documents (PDF, DOCX, PPTX, XLSX, HTML) using Microsoft's MarkItDown and structures it into Markdown.
-- **Smart Chunking for Large Files**: Bypasses the strict token limits of LLMs by breaking massive PDFs into 10,000-character chunks. The LLM processes each chunk sequentially with zero data loss.
+- **Smart Chunking for Large Files**: Bypasses the strict token limits of LLMs by breaking massive documents into 10,000-character chunks. The LLM processes each chunk sequentially with zero data loss.
 - **Real-Time Progress Tracking**: A sleek, animated progress bar powered by a robust backend polling mechanism visually tracks the AI's step-by-step thinking and chunking process.
-- **Automated Noise Filtering**: The AI is strictly prompted to identify and delete PDF artifacts such as page numbers, headers, footers, trademarks, copyright text, and formality sections.
+- **Ollama Health Monitoring**: Dynamically checks the local Ollama node connection. If the AI goes offline, the UI provides immediate visual feedback and failsafes disable AI execution to prevent errors.
+- **Automated Noise Filtering**: The AI is strictly prompted to identify and delete document artifacts such as page numbers, headers, footers, trademarks, copyright text, and formality sections.
 - **High-Performance Editor**: Built-in **Monaco Editor** (the engine behind VS Code) provides virtualized rendering, syntax highlighting, and lightning-fast search (`Ctrl+F`) for Markdown files exceeding 5MB+.
 - **Split-View Preview & Full Screen**: Work completely distraction-free with a full-screen toggle, and render your Markdown in real-time in an elegant, split-pane HTML preview powered by `react-markdown`.
 - **Robust File Management**: Instantly rename, download, and delete processed Markdown files directly from the user interface.
@@ -93,6 +94,7 @@ If you are running this behind a **Cloudflare Tunnel**, simply map your Public H
 ## 🧩 Core Functions & Architecture
 
 ### Backend Endpoints (`backend/main.py`)
+- `GET /api/health/ollama`: Actively probes the configured Ollama host to determine its operational status.
 - `POST /api/upload`: Handles document uploads, extracts text, calls the LLM engineer for chunking/structuring (if AI tuning is enabled), and saves the final `.md` file.
 - `GET /api/documents/{file_id}`: Retrieves the content of a structured Markdown file for the frontend editor.
 - `PUT /api/documents/{file_id}`: Overwrites the existing document with manual edits made in the Monaco editor.
@@ -101,6 +103,7 @@ If you are running this behind a **Cloudflare Tunnel**, simply map your Public H
 - `POST /api/documents/{file_id}/chat`: Accepts a user question and highlighted context, passing it to the LLM for an answer.
 
 ### LLM Engineer (`backend/services/llm_engineer.py`)
+- `check_ollama_health()`: Performs a quick connection check to ensure the LLM node is reachable.
 - `process_text_with_llm(raw_text)`: Slices text into 10,000-character chunks. Prompts `llama3` to discard noise, format as Markdown, and stitches the responses together.
 - `chat_with_llm(question, context)`: Sends a focused prompt to the LLM to answer the user's question strictly based on the provided highlighted text.
 

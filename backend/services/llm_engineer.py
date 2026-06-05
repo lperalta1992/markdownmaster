@@ -101,3 +101,13 @@ Answer:"""
     except Exception as e:
         print(f"LLM Chat Error: {e}")
         return "I'm sorry, I encountered an error while trying to process your request."
+
+def check_ollama_health() -> bool:
+    """
+    Performs a simple GET request to the Ollama host to check if it's reachable.
+    """
+    try:
+        response = requests.get(OLLAMA_HOST, timeout=2)
+        return response.status_code == 200
+    except requests.exceptions.RequestException:
+        return False

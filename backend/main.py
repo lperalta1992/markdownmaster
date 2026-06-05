@@ -5,7 +5,7 @@ from typing import List
 import uuid
 
 from services.document_extractor import extract_text_from_document
-from services.llm_engineer import process_text_with_llm, chat_with_llm
+from services.llm_engineer import process_text_with_llm, chat_with_llm, check_ollama_health
 
 app = FastAPI(title="MarkDownMaster API")
 
@@ -29,9 +29,14 @@ class ChatRequest(BaseModel):
     question: str
     context: str = ""
 
-@app.get("/api/")
+@app.get("/")
 def read_root():
     return {"message": "MarkDownMaster API is running"}
+
+@app.get("/api/health/ollama")
+def get_ollama_health():
+    is_online = check_ollama_health()
+    return {"status": "online" if is_online else "offline"}
 
 @app.post("/api/upload")
 async def upload_document(file: UploadFile = File(...), use_ai_tuning: bool = Form(True), task_id: str = Form(None)):

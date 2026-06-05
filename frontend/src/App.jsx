@@ -40,6 +40,7 @@ function App() {
   const [notification, setNotification] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [useAiTuning, setUseAiTuning] = useState(true);
+  const [isOllamaOnline, setIsOllamaOnline] = useState(true);
   const [progressState, setProgressState] = useState({ message: '', percent: 0, error: false });
   const pollIntervalRef = useRef(null);
   
@@ -61,6 +62,33 @@ function App() {
   const [isSplitView, setIsSplitView] = useState(false);
   const [editingDocId, setEditingDocId] = useState(null);
   const [newDocName, setNewDocName] = useState('');
+
+  // Poll Ollama Health
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch(`${API_URL}/health/ollama`);
+        if (res.ok) {
+          const data = await res.json();
+          const online = data.status === 'online';
+          setIsOllamaOnline(online);
+          if (!online) {
+            setUseAiTuning(false);
+          }
+        } else {
+          setIsOllamaOnline(false);
+          setUseAiTuning(false);
+        }
+      } catch (err) {
+        setIsOllamaOnline(false);
+        setUseAiTuning(false);
+      }
+    };
+    
+    checkHealth();
+    const interval = setInterval(checkHealth, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -308,9 +336,13 @@ function App() {
 
   return (
     <div className="app-container">
-      <header>
+      <header style={{ position: 'relative' }}>
+        <div style={{ position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-glass)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-full)' }}>
+          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: isOllamaOnline ? '#10b981' : '#ef4444', boxShadow: `0 0 10px ${isOllamaOnline ? '#10b981' : '#ef4444'}` }}></div>
+          <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Ollama {isOllamaOnline ? 'Online' : 'Offline'}</span>
+        </div>
         <h1>MarkDownMaster</h1>
-        <p>AI-Powered Knowledge Engineer for your PDFs</p>
+        <p>AI-Powered Knowledge Engineer for your Documents</p>
       </header>
 
       <main className="glass-panel" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
@@ -373,15 +405,17 @@ function App() {
                   style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem 1rem', borderRadius: '0.5rem' }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', cursor: !isOllamaOnline ? 'not-allowed' : 'pointer', gap: '0.5rem', opacity: !isOllamaOnline ? 0.5 : 1 }}>
                     <input 
                       type="checkbox" 
                       checked={useAiTuning} 
+                      disabled={!isOllamaOnline}
                       onChange={(e) => setUseAiTuning(e.target.checked)} 
-                      style={{ width: '1.2rem', height: '1.2rem', accentColor: 'var(--accent-primary)' }}
+                      style={{ width: '1.2rem', height: '1.2rem', accentColor: 'var(--accent-primary)', cursor: !isOllamaOnline ? 'not-allowed' : 'pointer' }}
                     />
                     <span>Tune and structure output with AI Knowledge Engineer</span>
                   </label>
+                  {!isOllamaOnline && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginLeft: 'auto' }}>Unavailable: Node is Offline</span>}
                 </div>
               </>
             )}
